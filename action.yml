@@ -1,21 +1,21 @@
-name: 'PowerShell Docs'
-description: 'Generates Markdown documentation based on comments in your PS-module'
+name: "PowerShell Docs"
+description: "Generates Markdown documentation based on comments in your PS-module"
 inputs:
-  who-to-greet:  # id of input
-    description: 'Who to greet'
+  who-to-greet: # id of input
+    description: "Who to greet"
     required: true
     default: 'World'
 outputs:
-  random-number: 
+  random-number:
     description: "Random number"
     value: ${{ steps.random-number-generator.outputs.random-id }}
 runs:
   using: "composite"
-  steps: 
+  steps:
     - run: echo Hello ${{ inputs.who-to-greet }}.
       shell: bash
     - id: random-number-generator
       run: echo "::set-output name=random-id::$(echo $RANDOM)"
       shell: bash
-    - run: sudo ${{ github.action_path }}/goodbye.sh
+    - run: ${{ github.action_path }}/goodbye.sh
       shell: bash
