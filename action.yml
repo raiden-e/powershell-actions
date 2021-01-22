@@ -1,21 +1,13 @@
-name: "PowerShell Docs"
+name: "PowerShell Dependencies"
 description: "Generates Markdown documentation based on comments in your PS-module"
-inputs:
-  who-to-greet: # id of input
-    description: "Who to greet"
-    required: true
-    default: 'World'
-outputs:
-  random-number:
-    description: "Random number"
-    value: ${{ steps.random-number-generator.outputs.random-id }}
+
 runs:
   using: "composite"
   steps:
-    - run: echo Hello ${{ inputs.who-to-greet }}.
+    - run: echo Install dependencies
       shell: bash
-    - id: random-number-generator
-      run: echo "::set-output name=random-id::$(echo $RANDOM)"
-      shell: bash
-    - run: ${{ github.action_path }}/goodbye.sh
-      shell: bash
+    - id: Install dependencies
+      run: . ./install-dependencies.ps1
+      shell: pwsh
+    - run: Install-Dependencies -path "${{ github.action_path }}"
+      shell: pwsh
