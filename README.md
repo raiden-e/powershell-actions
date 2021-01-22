@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./icons/powershell.svg"/> 
+  <img src="./icons/powershell.svg"/>
 </p>
 
 # powershell-actions
