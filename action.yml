@@ -7,7 +7,7 @@ runs:
     - run: echo Installing dependencies
       shell: bash
     - id: install-dependencies
-      run: . ./install-dependencies.ps1
+      run: . .${{ github.action_path }}/install-dependencies.ps1
       shell: pwsh
-    - run: Install-Dependencies -path "${{ github.action_path }}"
+    - run: Install-Dependencies -path "${{ github.WORKSPACE }}"
       shell: pwsh
