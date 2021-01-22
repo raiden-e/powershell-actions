@@ -7,7 +7,7 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - id: foo
-        uses: actions/powershell-actions@v2
+        uses: actions/powershell-actions@v1
         with:
           who-to-greet: "raiden-e"
       - run: echo random-number ${{ steps.foo.outputs.random-number }}
