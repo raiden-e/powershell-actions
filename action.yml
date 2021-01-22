@@ -4,9 +4,9 @@ description: "Generates Markdown documentation based on comments in your PS-modu
 runs:
   using: "composite"
   steps:
-    - run: echo Install dependencies
+    - run: echo Installing dependencies
       shell: bash
-    - id: Install dependencies
+    - id: install-dependencies
       run: . ./install-dependencies.ps1
       shell: pwsh
     - run: Install-Dependencies -path "${{ github.action_path }}"
