@@ -3,9 +3,9 @@ name: PowerShell
 
 on:
   push:
-    branches: [ $default-branch ]
+    branches: [$default-branch]
   pull_request:
-    branches: [ $default-branch ]
+    branches: [$default-branch]
 
 jobs:
   build:
@@ -16,16 +16,28 @@ jobs:
         os: [ubuntu-latest, windows-latest, macOS-latest]
 
     steps:
-    - uses: actions/checkout@v1
-    - name: Perform one Pester test to ensure files or folders are in the current directory
-      shell: pwsh
-      run: Get-ChildItem | Should -Not -BeNullOrEmpty
-    - name: Perform two Pester tests to ensure expected results
-      shell: pwsh
-      run: |
-        Get-ChildItem | Select-Object -ExpandProperty Name -First 1 | Should -Be '.github'
-        Get-Module Pester -ListAvailable | Measure-Object | Select -ExpandProperty Count | Should -BeGreaterThan 0
-    # Want to setup more advanced tests with Descriptions, Contexts and more? Use a ps1 script in your respository instead.
-    - name: Run a script in the tests directory that has advanced Pester testing 
-      shell: pwsh
-      run: ./tests/pester.ps1
+      - uses: actions/checkout@v2
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          if (Test-Path 'requirements.txt') {
+            Get-Content 'requirements.txt' | ForEach-Object {
+              $module = $_ -split "="
+              if ($module.count -gt 1) {
+                Install-Module -Name $module[0] -MinimumVersion $module[1] -Force -SkipPublisherCheck
+              }
+              else {
+                Install-Module -Name $module[0] -Force -SkipPublisherCheck
+              }
+            }
+          }
+
+      - name: Install Pester
+        shell: pwsh
+        run: Instll-Module -Name Pester -Force -SkipPublisherCheck -MinimumVersion '5.0'
+
+      - name: Test Modules in src
+        shell: pwsh
+        run: |
+          Invoke-Perster -Path ./src/* -CI
