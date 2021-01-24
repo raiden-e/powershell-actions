@@ -15,5 +15,5 @@ runs:
       run : . ${{ github.action_path }}/install-dependencies.ps1 -path "${{ github.WORKSPACE }}"
       shell: pwsh
     - id: build-docs
-      run : . ${{ github.action_path }}/build-docs.ps1 -path "${{ github.WORKSPACE }} -subdir "${{ inputs.subdir }}"
+      run : . ${{ github.action_path }}/build-docs.ps1 -path "${{ github.WORKSPACE }}" -subdir "${{ inputs.subdir }}"
       shell: pwsh
