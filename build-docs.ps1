@@ -3,7 +3,8 @@ param(
     [parameter(Mandatory = $true, Position = 0)] [string] $path,
     [ValidateSet("Confluence", "HTML", "Markdown", IgnoreCase = $true)]
     [parameter(Mandatory = $false, Position = 1)] [string] $template = "Markdown",
-    [parameter(Mandatory = $false, Position = 2)] [string] $outputDir = './help'
+    [parameter(Mandatory = $false, Position = 2)] [string] $outputDir = './help',
+    [parameter(Mandatory = $false, Position = 3)] [string] $subdir
 )
 function Repair-String ($in = '', [bool]$includeBreaks = $false) {
     if ($in -eq $null) { return }
@@ -93,7 +94,16 @@ switch ($template) {
     }
 }
 
-foreach ($script in Get-ChildItem -Path $patch) {
+if ($subdir) {
+    $testPath = Join-Path -Path $path -ChildPath $subdir
+    if (Test-Path $testPath) {
+        $path = $testPath
+    }
+    else {
+        Write-Warning "Path does not exist: $testpath"
+    }
+}
+foreach ($script in Get-ChildItem -Path "$path/*" -Include "*.ps1", "*.psm1" -Recurse) {
     $MarkdownText = ConvertTo-MarkdownDoc -moduleName $moduleName -commandsHelp $commandsHelp
     $DocFile = Join-Path $script.Directory.FullName, $script.basename, ".$extension"
     $MarkdownText | Out-File $DocFile -Encoding utf8 -Force
