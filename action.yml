@@ -2,8 +2,15 @@ name: "PowerShell Dependencies"
 description: "Generates Markdown documentation based on comments in your PS-module"
 
 inputs:
-  subfolder:  # id of input
+  subfolder:
     description: 'Subfolder that should be searched for .ps1 and .psm1 files'
+    required: false
+  output:
+    description: 'Subfolder where docs should be saved'
+    required: false
+  template:
+    description: 'You can choose to output "Markdown, "HTML" or "Confluence" docs'
+    default: Markdown
     required: false
 
 runs:
@@ -15,5 +22,5 @@ runs:
       run : . ${{ github.action_path }}/install-dependencies.ps1 -path "${{ github.WORKSPACE }}"
       shell: pwsh
     - id: build-docs
-      run : . ${{ github.action_path }}/build-docs.ps1 -path "${{ github.WORKSPACE }}" -subdir "${{ inputs.subdir }}"
+      run : . ${{ github.action_path }}/build-docs.ps1 -path "${{ github.WORKSPACE }}" -subdir "${{ inputs.subdir }}" -template "${{ inputs.template }}"
       shell: pwsh
