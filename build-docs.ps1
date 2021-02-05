@@ -11,17 +11,40 @@ param(
     [ValidatePattern('^([\w,+\(\)\.\-]|[ ](?! ))+[^\.]$')][string]$log
 )
 $ErrorActionPreference = "Stop"
+Get-ChildItem env:
 function Initialize-Wiki {
     [CmdletBinding()]
-    param ()
-    # git config --global user.name $actionName
-    # git config --global user.email $actionMail
-    Get-ChildItem env:
-    # Get-ChildItem -Force -Path $env:temp | Where-Object { $_.Name -like '*%docs%*' } | Remove-Item -Recurse -Force
-    # git clone %gitwiki% %temp%\%docs%
-    # Get-ChildItem -Recurse -Force -Path "$env:temp/$env:docs" | Where-Object { $_.fullname -notlike '*[\/].git*' } | Remove-Item -Recurse -Force
+    param (
+        [string]$actionName,
+        [string]$actionMail
+    )
+    if ($env:gitWiki -and $actionName -and $actionMail) {
+        git config --global user.name $actionName
+        git config --global user.email $actionMail
+        clone $env:gitWiki $docDir
+        Get-ChildItem -Recurse -Force -Path $docDir | Where-Object { $_.fullname -notlike '*[\/].git*' } | Remove-Item -Recurse -Force
+    }
+    else {
+        Write-Warning "Cannot Initialize Wiki"
+    }
 }
-Initialize-Wiki
+function Push-Wiki {
+    [CmdletBinding()]
+    param (
+        $docDir
+    )
+    if ($env:gitWiki) {
+        $local:oldLocation
+        Set-Location $docDir
+        git add -A
+        git commit -m "Auto-updated Wiki"
+        git push origin "HEAD:master"
+        Set-Location $local:oldLocation
+    }
+    else {
+        Write-Warning "Not pushing Wiki"
+    }
+}
 
 
 if ((!(Test-Path variable:IsWindows)) -or ($IsWindows)) {
@@ -94,21 +117,25 @@ if ($subdir) {
     }
 }
 
-$whereFilter = { (".ps1", ".psm1") -contains $_.extension -and $_.Directory -notlike "*[\\\/]src" }
+$whereFilter = { (".ps1", ".psm1") -contains $_.extension }
 # The -filter is quicker than powershells post filter methods
 $scripts = Get-ChildItem -Recurse -Force -Path $path -Filter "*.ps*1" | Where-Object $whereFilter
 Write-Host "Found scripts: $scripts"
 
-
+$oldLocation = $pwd
+Set-Location $path
 Initialize-Wiki
-
 foreach ($script in $scripts) {
     $outString = $script.FullName | Import-Help | ConvertTo-MarkdownDoc -moduleName $script.BaseName
-    $RelativeDir = (Get-Item $script.Directory.Fullname | Resolve-Path -Relative).Replace("\.+\\$([Regex]::Escape($script.directory.name))\.*", "")
-    $DocFile = $docDir | Join-Path -ChildPath $RelativeDir | Join-Path -ChildPath "$($script.basename).$extension"
+    $RelativeDir = (Get-Item $script.Directory.Fullname | Resolve-Path -Relative).Substring(2)
+    # $RelativeDir = "$RelativeDir" -replace "\.*\\.+\\", ''
+    $scriptDocDir = $docDir | Join-Path -ChildPath $RelativeDir
+    $DocFile = $scriptDocDir | Join-Path -ChildPath "$($script.basename).$extension"
     "Writing: $DocFile"
-    if (-not $docDir | Join-Path -ChildPath $RelativeDir | Test-Path) {
-        $docDir | Join-Path -ChildPath $RelativeDir | New-item -ItemType Directory -Force
+    if (-not ($scriptDocDir | Test-Path)) {
+        New-item -Path $scriptDocDir -ItemType Directory -Force | Out-Null
     }
     $outString | Out-File $DocFile -Encoding utf8 -Force
 }
+Set-Location $oldLocation
+Push-Wiki -docDir $docDir

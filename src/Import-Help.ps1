@@ -23,7 +23,7 @@ function Import-Help {
     }
     Write-Host $path
     try {
-        $commandsHelp = Get-Help -Path $paths
+        $commandsHelp = Get-Help -Name $path
     }
     catch {
         throw "Could not find $path", $_
