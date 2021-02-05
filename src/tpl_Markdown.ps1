@@ -69,23 +69,20 @@ function ConvertTo-MarkdownDoc {
     )
 
     $returnText = "# $moduleName Module`n`n"
-    $commandsHelp | ForEach-Object {
 
-        # Name
-        try {
-            if (![string]::IsNullOrWhiteSpace($_.ModuleName)) {
-                $returnText += "## $(Out-Markdown($_.ModuleName))`n`n"
-            }
-            elseif (![string]::IsNullOrWhiteSpace($commandsHelp.ModuleName)) {
-                $returnText += "## $(Out-Markdown($commandsHelp.ModuleName))`n`n"
-            }
-            else {
-                $returnText += "## $(Out-Markdown($_.Name))`n`n"
-            }
+    # Name
+    try {
+        if (![string]::IsNullOrWhiteSpace($commandsHelp.ModuleName)) {
+            $returnText += "## $(Out-Markdown($commandsHelp.ModuleName))`n`n"
+            $addEndHash = $true
+
         }
-        catch {
-            $returnText += "## $(Out-Markdown($_.Name))`n`n"
-        }
+    }
+    catch {
+        Write-Warning "not a module"
+    }
+
+    $commandsHelp | ForEach-Object {
 
         # Synopsis
         $synopsis = $_.synopsis.Trim()
@@ -94,11 +91,11 @@ function ConvertTo-MarkdownDoc {
             $tmp = $synopsis
             $synopsis = $syntax
             $syntax = $tmp
-            $returnText += "### Synopsis`n`n$(Out-Markdown($syntax))`n`n"
+            $returnText += "## Synopsis`n`n$(Out-Markdown($syntax))`n`n"
         }
 
         # Syntax
-        $returnText += "### Syntax"
+        $returnText += "## Syntax"
         $returnText += "`n`n"
         $returnText += '```powershell'
         $returnText += "`n"
@@ -108,7 +105,7 @@ function ConvertTo-MarkdownDoc {
 
         # # Aliases
         if (!($_.alias.Length -eq 0)) {
-            $returnText += "`n### $($_.Name) Aliases`n"
+            $returnText += "`n## $($_.Name) Aliases`n"
 
             $_.alias | ForEach-Object {
                 $returnText += "`n- $($_.Name)`n`n"
@@ -117,7 +114,7 @@ function ConvertTo-MarkdownDoc {
 
         # Parameters
         if ($_.parameters) {
-            $returnText += "`n`n### Parameters`n`n"
+            $returnText += "`n`n## Parameters`n`n"
 
             $_.parameters.parameter | ForEach-Object {
                 $returnText += "`n``-$(Out-Markdown($_.Name))```n`n"
@@ -137,29 +134,29 @@ function ConvertTo-MarkdownDoc {
         # Inputs
         $inputTypes = $(Out-Markdown($_.inputTypes | Out-String))
         if ($inputTypes.Length -gt 0 -and -not $inputTypes.Contains('inputType')) {
-            $returnText += "`n### Inputs`n`n- $inputTypes`n"
+            $returnText += "`n## Inputs`n`n- $inputTypes`n"
         }
 
         # Outputs
         $returnValues = $(Out-Markdown($_.returnValues | Out-String))
         if ($returnValues.Length -gt 0 -and -not $returnValues.StartsWith("returnValue")) {
-            $returnText += "`n### Outputs`n`n- $returnValues`n"
+            $returnText += "`n## Outputs`n`n- $returnValues`n"
         }
 
         # Note
         $notes = $(($_.alertSet | Out-String))
         $notes = Format-String $notes
         if ($notes -and $notes.Trim().Length -gt 0) {
-            $returnText += "`n### Notes`n"
+            $returnText += "`n## Notes`n"
             $returnText += "`n$notes"
             $returnText += "`n"
         }
 
         # Examples
         if (($_.examples.example.Length -gt 0)) {
-            $returnText += "`n### Examples`n`n"
+            $returnText += "`n## Examples`n`n"
             foreach ($ex in $_.examples.example) {
-                $returnText += "`n#### $(Out-Markdown($ex.title.Trim('-', ' ')))`n`n"
+                $returnText += "`n### $(Out-Markdown($ex.title.Trim('-', ' ')))`n`n"
                 $returnText += '```powershell'
                 $returnText += "`n$($ex.code | Out-String)"
                 $returnText += "```````n"
@@ -168,14 +165,22 @@ function ConvertTo-MarkdownDoc {
 
         # Related Links
         if (($_.relatedLinks | Out-String).Trim().Length -gt 0) {
-            $returnText += "`n### Links`n"
+            $returnText += "`n## Links`n"
             $_.links | ForEach-Object {
                 $returnText += "`n- [$($_.name)]($($_.link))"
             }
         }
     }
+    if ($addEndHash) {
+        foreach ($line in $returnText) {
+            if($line -match '#{3,}'){
+                $line.Insert(0, '#')
+            }
+        }
+    }
 
     $returnText = $returnText | Out-String
+
     $returnText = $returnText -replace '(\n|\r|\s){3,}', "`n`n"
     return $returnText
 }

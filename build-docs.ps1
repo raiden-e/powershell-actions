@@ -126,7 +126,7 @@ $oldLocation = $pwd
 Set-Location $path
 Initialize-Wiki
 foreach ($script in $scripts) {
-    $outString = $script.FullName | Import-Help | ConvertTo-MarkdownDoc -moduleName $script.BaseName
+    $outString = $script.FullName | Import-Help | ConvertTo-MarkdownDoc -moduleName $script.Name
     $RelativeDir = (Get-Item $script.Directory.Fullname | Resolve-Path -Relative).Substring(2)
     # $RelativeDir = "$RelativeDir" -replace "\.*\\.+\\", ''
     $scriptDocDir = $docDir | Join-Path -ChildPath $RelativeDir

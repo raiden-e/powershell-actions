@@ -23,14 +23,15 @@ function Import-Help {
     }
     Write-Host $path
     try {
-        $commandsHelp = Get-Help -Name $path
+        $commandsHelp = Get-Help -Name $path -Full
+        $commandsHelp
     }
     catch {
         throw "Could not find $path", $_
     }
 
     foreach ($help in $commandsHelp) {
-        $cmdHelp = (Get-Command $help.Name)
+        $cmdHelp = Get-Command $help.Name
 
         # Get any aliases associated with the method
         $alias = Get-Alias -Definition $help.Name -ErrorAction SilentlyContinue
