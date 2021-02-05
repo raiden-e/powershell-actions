@@ -34,7 +34,7 @@ function Import-Help {
         try{
             $cmdHelp = Get-Command $help.Name}
             catch{
-                Get-Command $help | Get-Member
+                $help | Get-Member
                 throw
             }
 
