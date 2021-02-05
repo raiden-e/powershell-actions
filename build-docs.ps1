@@ -11,6 +11,18 @@ param(
     [ValidatePattern('^([\w,+\(\)\.\-]|[ ](?! ))+[^\.]$')][string]$log
 )
 $ErrorActionPreference = "Stop"
+function Initialize-Wiki {
+    [CmdletBinding()]
+    param ()
+    # git config --global user.name $actionName
+    # git config --global user.email $actionMail
+    Get-ChildItem env:
+    # Get-ChildItem -Force -Path $env:temp | Where-Object { $_.Name -like '*%docs%*' } | Remove-Item -Recurse -Force
+    # git clone %gitwiki% %temp%\%docs%
+    # Get-ChildItem -Recurse -Force -Path "$env:temp/$env:docs" | Where-Object { $_.fullname -notlike '*[\/].git*' } | Remove-Item -Recurse -Force
+}
+Initialize-Wiki
+
 
 if ((!(Test-Path variable:IsWindows)) -or ($IsWindows)) {
     #IsWindows does not exist in Windows PowerShell (first check above) and is $True on PowerShell Core / 7 on Windows
@@ -86,6 +98,9 @@ $whereFilter = { (".ps1", ".psm1") -contains $_.extension -and $_.Directory -not
 # The -filter is quicker than powershells post filter methods
 $scripts = Get-ChildItem -Recurse -Force -Path $path -Filter "*.ps*1" | Where-Object $whereFilter
 Write-Host "Found scripts: $scripts"
+
+
+Initialize-Wiki
 
 foreach ($script in $scripts) {
     $outString = $script.FullName | Import-Help | ConvertTo-MarkdownDoc -moduleName $script.BaseName
