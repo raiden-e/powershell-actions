@@ -5,10 +5,10 @@ param(
     [parameter(Mandatory = $false, Position = 1)] [string] $docDir,
     # if your modules are in e.g. repo/src
     [parameter(Mandatory = $false, Position = 2)] [string] $subdir,
-    [ValidateSet("Confluence", "HTML", "Markdown", IgnoreCase = $true)]
-    [parameter(Mandatory = $false, Position = 3)] [string] $template = "Markdown",
-    [ValidatePattern('^([\w,+\(\)\.\-]|[ ](?! ))+[^\.]$')]
-    [parameter(Mandatory = $false, Position = 4)] [string]$log
+    [parameter(Mandatory = $false, Position = 3)]
+    [ValidateSet("Confluence", "HTML", "Markdown", IgnoreCase = $true)] [string] $template = "Markdown",
+    [parameter(Mandatory = $false, Position = 4)]
+    [ValidatePattern('^([\w,+\(\)\.\-]|[ ](?! ))+[^\.]$')][string]$log
 )
 $ErrorActionPreference = "Stop"
 
@@ -32,7 +32,7 @@ if ($log) {
         $logPath = $pwd | Join-Path -ChildPath $log
     }
     else {
-        $logPath =  $pwd | Join-Path -ChildPath "$log.log"
+        $logPath = $pwd | Join-Path -ChildPath "$log.log"
     }
     try {
         Start-Transcript -Path $logPath -Force
