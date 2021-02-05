@@ -3,6 +3,7 @@ param(
     [parameter(Mandatory = $true, Position = 0)]  [string] $path,
     [ValidateNotNullOrEmpty()]
     [parameter(Mandatory = $false, Position = 1)] [string] $docDir,
+    # if your modules are in e.g. repo/src
     [parameter(Mandatory = $false, Position = 2)] [string] $subdir,
     [ValidateSet("Confluence", "HTML", "Markdown", IgnoreCase = $true)]
     [parameter(Mandatory = $false, Position = 3)] [string] $template = "Markdown",
@@ -22,19 +23,19 @@ else {
 }
 
 if ([string]::IsNullOrWhiteSpace($docDir)) {
-    $docDir = & { if ($env:TEMP) { return $env:Temp }else { return $pwd.Path } } | Join-Path -ChildPath "docs"
+    $docDir = & { if ($env:temp) { return $env:temp }else { return $pwd.Path } } | Join-Path -ChildPath "docs"
     Write-Warning "$docDir"
 }
 
 if ($log) {
     if ($log.Substring($log.Length - 4) -eq ".log") {
-        $path = Join-Path $pwd -ChildPath $log
+        $logPath = $pwd | Join-Path -ChildPath $log
     }
     else {
-        $path = Join-Path $pwd -ChildPath "$log.log"
+        $logPath =  $pwd | Join-Path -ChildPath "$log.log"
     }
     try {
-        Start-Transcript -Path $path -Force
+        Start-Transcript -Path $logPath -Force
     }
     catch {
         Write-Warning "Could'nt Start Transcript:"
@@ -42,57 +43,35 @@ if ($log) {
     }
 }
 
-# $gitBase = "$env:CI_PROJECT_URL.git"
-$gitBase = "https://mips-git.materna.de/mips/dx-union/dev/ci-test"
-$gitUrl = "$gitBase.git"
-$wikiUrl = "$gitBase.wiki.git"
-Write-Host "--- Starting script ---"
-Write-Host "Test Path docDir `'$docDir`': $(Test-Path "$docdir")"
-Write-Host "$env:CI_PROJECT_URL`n$gitUrl`n$wikiUrl`n$env:CI_PROJECT_DIR"
-# Get-ChildItem $env:CI_PROJECT_DIR
-
-if (Test-Path $docDir) {
-    Remove-Item -Path $docDir -Force -Recurse
-}
-
-# Load template functions
 try {
-    $tplPath = $env:CI_PROJECT_DIR
+    $tplPath = Join-Path $PSScriptRoot -ChildPath "src"
     if (-not $tplPath) { $tplPath = $pwd }
     switch ($template) {
         "Markdown" {
             $extension = "md"
-            Join-Path -Path "$tplPath/src" -ChildPath "tpl_Markdown.ps1"   | Import-Module -Force
+            $tplPath | Join-Path -ChildPath "tpl_Markdown.ps1"   | Import-Module -Force
         }
         "Confluence" {
             $extension = "md"
-            Join-Path -Path "$tplPath/src" -ChildPath "tpl_Confluence.ps1" | Import-Module -Force
+            $tplPath | Join-Path -ChildPath "tpl_Confluence.ps1" | Import-Module -Force
         }
         "HTML" {
             $extension = "html"
-            Join-Path -Path "$tplPath/src" -ChildPath "tpl_HTML.ps1"       | Import-Module -Force
+            $tplPath | Join-Path -ChildPath "tpl_HTML.ps1"       | Import-Module -Force
         }
     }
 }
 catch {
     throw "Could not find template`n$_"
 }
+
 try {
-    Join-Path -Path $PSScriptRoot -ChildPath "Import-Help.ps1" | Import-Module -Force
+    $PSScriptRoot | Join-Path -ChildPath "src" | Join-Path -ChildPath "Import-Help.ps1" | Import-Module -Force
 }
 catch {
     throw "Could not find importer`n$_"
 }
 
-
-# Create subdirectory if given
-
-if ($path.Contains('$')) {
-    $path2 = Invoke-Expression $path
-    if (Test-Path $path2) {
-        $path = $path2
-    }
-}
 if ($subdir) {
     $testPath = Join-Path -Path $path -ChildPath $subdir
     if (Test-Path $testPath) {
@@ -103,21 +82,20 @@ if ($subdir) {
     }
 }
 
-$whereFilter = { (".ps1", ".psm1") -contains $_.extension }
+$whereFilter = { (".ps1", ".psm1") -contains $_.extension -and $_.Directory -notlike "*[\\\/]src" }
 # The -filter is quicker than powershells post filter methods
 $scripts = Get-ChildItem -Recurse -Force -Path $path -Filter "*.ps*1" | Where-Object $whereFilter
-
-Test-Git
-Initialize-Wiki -url $wikiUrl -path $docDir
+Write-Host "Found scripts: $scripts"
 
 foreach ($script in $scripts) {
-    $outFile = Import-Help -path $script.FullName | ConvertTo-MarkdownDoc -moduleName "$($script.BaseName)"
-    $RelativeDir = (Get-Item $script.Directory.Fullname | Resolve-Path -Relative) -replace "..\\$([Regex]::Escape($script.directory.name))", ''
+    $outString = $script.FullName | Import-Help | ConvertTo-MarkdownDoc -moduleName $script.BaseName
+    $RelativeDir = (Get-Item $script.Directory.Fullname | Resolve-Path -Relative).Replace("\.+\\$([Regex]::Escape($script.directory.name))\.*", "")
+    # TODO keep directorial structure
+    # if($RelativeDir.Directory.name -ne $this){ $RelativeDir =  "\.+\\$([Regex]::Escape($script.directory.name))\.*", "" }
     $DocFile = $docDir | Join-Path -ChildPath $RelativeDir | Join-Path -ChildPath "$($script.basename).$extension"
-    if (!($docDir | Join-Path -ChildPath $RelativeDir | Test-Path)) {
-        New-item -Path ($docDir | Join-Path -ChildPath $RelativeDir) -ItemType Directory -Force
+    "Writing: $DocFile"
+    if (-not $docDir | Join-Path -ChildPath $RelativeDir | Test-Path) {
+        $docDir | Join-Path -ChildPath $RelativeDir | New-item -ItemType Directory -Force
     }
-    Out-File $DocFile -InputObject $outFile -Encoding utf8 -Force
+    $outString | Out-File $DocFile -Encoding utf8 -Force
 }
-
-Push-Wiki -url $wikiUrl -path $docDir

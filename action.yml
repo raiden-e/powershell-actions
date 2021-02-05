@@ -36,7 +36,7 @@ runs:
       shell: pwsh
 
     - id: build-docs
-      run: ${{ github.action_path }}/build-docs.ps1
+      run: ${{ github.action_path }}/build-docs.ps1 -path "${{ github.WORKSPACE }}""
       shell: pwsh
       env:
         Temp: ${{ runner.temp }}

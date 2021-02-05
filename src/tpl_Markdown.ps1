@@ -62,10 +62,11 @@ function Out-Markdown {
 function ConvertTo-MarkdownDoc {
     [CmdletBinding()]
     param (
-        [string]$moduleName,
-        $commandsHelp
+        [Parameter(ValueFromPipeline)]
+        $commandsHelp,
+        [Parameter()]
+        [string]$moduleName
     )
-
 
     $returnText = "# $moduleName Module`n`n"
     $commandsHelp | ForEach-Object {
@@ -173,6 +174,7 @@ function ConvertTo-MarkdownDoc {
             }
         }
     }
+
     $returnText = $returnText | Out-String
     $returnText = $returnText -replace '(\n|\r|\s){3,}', "`n`n"
     return $returnText
