@@ -2,13 +2,13 @@ function Import-Help {
     [CmdletBinding()]
     param (
         # Name of the Module
+        [string]$moduleName,
         # Specifies a path to one or more locations. Wildcards are permitted.
         [Parameter(Mandatory=$true,
                    Position=1,
                    ValueFromPipeline=$true,
                    ValueFromPipelineByPropertyName=$true,
                    HelpMessage="Name of the Module.")]
-        [string]$moduleName,
         $path
     )
 
@@ -30,7 +30,7 @@ function Import-Help {
     }
 
     if ([string]::IsNullOrWhiteSpace($commandsHelp)) {
-        $commandsHelp = (Get-Command $moduleName -ErrorAction SilentlyContinue) | Get-Help -Full
+        $commandsHelp = (Get-Command $moduleName -ErrorAction SilentlyContinue) | Get-Help -Full -ErrorAction SilentlyContinue
         if ([string]::IsNullOrWhiteSpace($commandsHelp)) {
             try {
                 $commandsHelp = Get-Help .\$moduleName -Full
