@@ -105,8 +105,6 @@ Initialize-Wiki
 foreach ($script in $scripts) {
     $outString = $script.FullName | Import-Help | ConvertTo-MarkdownDoc -moduleName $script.BaseName
     $RelativeDir = (Get-Item $script.Directory.Fullname | Resolve-Path -Relative).Replace("\.+\\$([Regex]::Escape($script.directory.name))\.*", "")
-    # TODO keep directorial structure
-    # if($RelativeDir.Directory.name -ne $this){ $RelativeDir =  "\.+\\$([Regex]::Escape($script.directory.name))\.*", "" }
     $DocFile = $docDir | Join-Path -ChildPath $RelativeDir | Join-Path -ChildPath "$($script.basename).$extension"
     "Writing: $DocFile"
     if (-not $docDir | Join-Path -ChildPath $RelativeDir | Test-Path) {
