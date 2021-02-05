@@ -1,26 +1,46 @@
-name: "PowerShell Dependencies"
+name: "PowerShell AutoDocumentation"
 description: "Generates Markdown documentation based on comments in your PS-module"
 
 inputs:
   subfolder:
-    description: 'Subfolder that should be searched for .ps1 and .psm1 files'
+    description: "Subfolder that should be searched for .ps1 and .psm1 files"
     required: false
   output:
-    description: 'Subfolder where docs should be saved'
+    description: "Subfolder where docs should be saved"
     required: false
   template:
     description: 'You can choose to output "Markdown, "HTML" or "Confluence" docs'
     default: Markdown
     required: false
 
+outputs:
+  result:
+    description: Return value of script execution
+    value: ${{ steps.script.outputs.result }}
+  error:
+    description: Exception details, if any was thrown during script execution.
+    value: ${{ steps.script.outputs.error }}
+
 runs:
   using: "composite"
   steps:
     - run: echo Installing dependencies
       shell: bash
+
+    - id: initialize-wiki
+      run: ${{ github.action_path }}/Initialize-Wiki.ps1
+      shell: bash
+
     - id: install-dependencies
-      run : . ${{ github.action_path }}/install-dependencies.ps1 -path "${{ github.WORKSPACE }}"
+      run: ${{ github.action_path }}/install-dependencies.ps1 -path "${{ github.WORKSPACE }}"
       shell: pwsh
+
     - id: build-docs
-      run : . ${{ github.action_path }}/build-docs.ps1 -path "${{ github.WORKSPACE }}" -subdir "${{ inputs.subdir }}" -template "${{ inputs.template }}"
+      run: ${{ github.action_path }}/build-docs.ps1
+      shell: pwsh
+      env:
+        Temp: ${{ runner.temp }}
+
+    - id: push-wiki
+      run: ${{ github.action_path }}/Push-Wiki.ps1
       shell: pwsh

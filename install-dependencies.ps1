@@ -2,8 +2,13 @@
 param (
     [string]$path = $PWD
 )
+
+Install-Module -Name platyPS -Scope CurrentUser
+Import-Module platyPS
+
 if (Test-Path (Join-Path -Path $path -Childpath 'requirements.txt')) {
     Get-Content 'requirements.txt' | ForEach-Object {
+        Write-Verbose "Installing Dependencies"
         $module = $_ -split "="
         for ($i = 0; $i -lt $module.count; $i++) {
             $module[$i] = ($module[$i] | Out-String).Trim()

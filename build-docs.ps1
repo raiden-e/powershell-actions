@@ -1,100 +1,98 @@
 [CmdletBinding()]
 param(
     [parameter(Mandatory = $true, Position = 0)]  [string] $path,
+    [ValidateNotNullOrEmpty()]
+    [parameter(Mandatory = $false, Position = 1)] [string] $docDir,
+    [parameter(Mandatory = $false, Position = 2)] [string] $subdir,
     [ValidateSet("Confluence", "HTML", "Markdown", IgnoreCase = $true)]
-    [parameter(Mandatory = $false, Position = 1)] [string] $subdir,
-    [parameter(Mandatory = $true, Position = 2)]  [string] $outputDir,
-    [parameter(Mandatory = $false, Position = 3)] [string] $template = "Markdown"
+    [parameter(Mandatory = $false, Position = 3)] [string] $template = "Markdown",
+    [ValidatePattern('^([\w,+\(\)\.\-]|[ ](?! ))+[^\.]$')]
+    [parameter(Mandatory = $false, Position = 4)] [string]$log
 )
+$ErrorActionPreference = "Stop"
 
-function Import-Help {
-    param (
-        $moduleName
-    )
-    $commandsHelp = (Get-Command -module $moduleName) | Get-Help -Full | Where-Object { ! $_.name.EndsWith('.ps1') }
+if ((!(Test-Path variable:IsWindows)) -or ($IsWindows)) {
+    #IsWindows does not exist in Windows PowerShell (first check above) and is $True on PowerShell Core / 7 on Windows
+    $CurrentUser = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent())
+    $IsAdmin = $CurrentUser.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    Write-Host "isAdmin: $IsAdmin"
+}
+else {
+    Write-Host "Not running on Windows."
+}
 
-    if ([string]::IsNullOrWhiteSpace($commandsHelp)) {
-        $commandsHelp = (Get-Command $moduleName -ErrorAction SilentlyContinue) | Get-Help -Full
-        if ([string]::IsNullOrWhiteSpace($commandsHelp)) {
-            try {
-                $commandsHelp = Get-Help .\$moduleName -Full
-                # $commandsHelp.details.name = (Resolve-Path .\$moduleName -ErrorAction SilentlyContinue).basename
-            }
-            catch {
-                try {
-                    Get-Help .\$moduleName.ps1 -Full
-                    # $commandsHelp.details.name = (Resolve-Path .\$moduleName.ps1 -ErrorAction Stop).basename
-                }
-                catch {
-                    throw "ERROR: Command's help file is empty"
-                }
-            }
-        }
+if ([string]::IsNullOrWhiteSpace($docDir)) {
+    $docDir = & { if ($env:TEMP) { return $env:Temp }else { return $pwd.Path } } | Join-Path -ChildPath "docs"
+    Write-Warning "$docDir"
+}
+
+if ($log) {
+    if ($log.Substring($log.Length - 4) -eq ".log") {
+        $path = Join-Path $pwd -ChildPath $log
     }
-
-    foreach ($help in $commandsHelp) {
-        $cmdHelp = (Get-Command $help.Name)
-
-        # Get any aliases associated with the method
-        $alias = Get-Alias -Definition $help.Name -ErrorAction SilentlyContinue
-        if ($alias) {
-            $help | Add-Member Alias $alias
-        }
-
-        # Parse the related links and assign them to a links hashtable.
-        if (($help.relatedLinks | Out-String).Trim().Length -gt 0) {
-            $links = $help.relatedLinks.navigationLink | ForEach-Object {
-                if ($_.uri) { @{name = $_.uri; link = $_.uri; target = '_blank' } }
-                if ($_.linkText) { @{name = $_.linkText; link = "#$($_.linkText)"; cssClass = 'psLink'; target = '_top' } }
-            }
-            $help | Add-Member Links $links
-        }
-
-        # Add parameter aliases to the object.
-        foreach ($p in $help.parameters.parameter ) {
-            $paramAliases = ($cmdHelp.parameters.values | Where-Object name -like $p.name | Select-Object aliases).Aliases
-            if ($paramAliases) {
-                $p | Add-Member Aliases "$($paramAliases -Join ', ')" -Force
-            }
-        }
+    else {
+        $path = Join-Path $pwd -ChildPath "$log.log"
     }
-
-    $totalCommands = $commandsHelp.Count
-    if (!$totalCommands) {
-        $totalCommands = 1
+    try {
+        Start-Transcript -Path $path -Force
+    }
+    catch {
+        Write-Warning "Could'nt Start Transcript:"
+        Write-Host $_
     }
 }
 
-# Create the output directory if it does not exist
-if (!$outputDir) {
-    throw "No output directory provided"
-}
-if (!(Test-Path $outputDir)) {
-    New-Item -Path $outputDir -ItemType Directory | Out-Null
+# $gitBase = "$env:CI_PROJECT_URL.git"
+$gitBase = "https://mips-git.materna.de/mips/dx-union/dev/ci-test"
+$gitUrl = "$gitBase.git"
+$wikiUrl = "$gitBase.wiki.git"
+Write-Host "--- Starting script ---"
+Write-Host "Test Path docDir `'$docDir`': $(Test-Path "$docdir")"
+Write-Host "$env:CI_PROJECT_URL`n$gitUrl`n$wikiUrl`n$env:CI_PROJECT_DIR"
+# Get-ChildItem $env:CI_PROJECT_DIR
+
+if (Test-Path $docDir) {
+    Remove-Item -Path $docDir -Force -Recurse
 }
 
 # Load template functions
 try {
+    $tplPath = $env:CI_PROJECT_DIR
+    if (-not $tplPath) { $tplPath = $pwd }
     switch ($template) {
         "Markdown" {
             $extension = "md"
-            Join-Path -Path "$PSScriptRoot/src" -ChildPath "Markdown.ps1"   | Import-Module -Force
+            Join-Path -Path "$tplPath/src" -ChildPath "tpl_Markdown.ps1"   | Import-Module -Force
         }
         "Confluence" {
             $extension = "md"
-            Join-Path -Path "$PSScriptRoot/src" -ChildPath "Confluence.ps1" | Import-Module -Force
+            Join-Path -Path "$tplPath/src" -ChildPath "tpl_Confluence.ps1" | Import-Module -Force
         }
         "HTML" {
             $extension = "html"
-            Join-Path -Path "$PSScriptRoot/src" -ChildPath "HTML.ps1"       | Import-Module -Force
+            Join-Path -Path "$tplPath/src" -ChildPath "tpl_HTML.ps1"       | Import-Module -Force
         }
     }
 }
 catch {
-    throw "Could not find template"
+    throw "Could not find template`n$_"
+}
+try {
+    Join-Path -Path $PSScriptRoot -ChildPath "Import-Help.ps1" | Import-Module -Force
+}
+catch {
+    throw "Could not find importer`n$_"
 }
 
+
 # Create subdirectory if given
+
+if ($path.Contains('$')) {
+    $path2 = Invoke-Expression $path
+    if (Test-Path $path2) {
+        $path = $path2
+    }
+}
 if ($subdir) {
     $testPath = Join-Path -Path $path -ChildPath $subdir
     if (Test-Path $testPath) {
@@ -105,9 +103,21 @@ if ($subdir) {
     }
 }
 
+$whereFilter = { (".ps1", ".psm1") -contains $_.extension }
+# The -filter is quicker than powershells post filter methods
+$scripts = Get-ChildItem -Recurse -Force -Path $path -Filter "*.ps*1" | Where-Object $whereFilter
 
-foreach ($script in Get-ChildItem -Path "$path/*" -Include "*.ps1", "*.psm1" -Recurse) {
-    $outFile = Import-Help $script | ConvertTo-MarkdownDoc -moduleName $moduleName -commandsHelp $_
-    $DocFile = Join-Path $script.Directory.FullName, $script.basename, ".$extension"
+Test-Git
+Initialize-Wiki -url $wikiUrl -path $docDir
+
+foreach ($script in $scripts) {
+    $outFile = Import-Help -path $script.FullName | ConvertTo-MarkdownDoc -moduleName "$($script.BaseName)"
+    $RelativeDir = (Get-Item $script.Directory.Fullname | Resolve-Path -Relative) -replace "..\\$([Regex]::Escape($script.directory.name))", ''
+    $DocFile = $docDir | Join-Path -ChildPath $RelativeDir | Join-Path -ChildPath "$($script.basename).$extension"
+    if (!($docDir | Join-Path -ChildPath $RelativeDir | Test-Path)) {
+        New-item -Path ($docDir | Join-Path -ChildPath $RelativeDir) -ItemType Directory -Force
+    }
     Out-File $DocFile -InputObject $outFile -Encoding utf8 -Force
 }
+
+Push-Wiki -url $wikiUrl -path $docDir
