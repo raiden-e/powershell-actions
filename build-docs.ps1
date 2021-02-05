@@ -34,12 +34,15 @@ function Push-Wiki {
         $docDir
     )
     if ($env:gitWiki) {
-        $local:oldLocation
         Set-Location $docDir
-        git add -A
-        git commit -m "Auto-updated Wiki"
-        git push origin "HEAD:master"
-        Set-Location $local:oldLocation
+        try {
+            git add -A
+            git commit -m "Auto-updated Wiki"
+            git push origin "HEAD:master"
+        }
+        catch {
+            Write-Warning "could not push Wiki"
+        }
     }
     else {
         Write-Warning "Not pushing Wiki"
@@ -137,5 +140,5 @@ foreach ($script in $scripts) {
     }
     $outString | Out-File $DocFile -Encoding utf8 -Force
 }
-Set-Location $oldLocation
 Push-Wiki -docDir $docDir
+Set-Location $oldLocation
