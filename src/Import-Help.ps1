@@ -1,51 +1,32 @@
 function Import-Help {
     [CmdletBinding()]
     param (
+        # Specifies a path to one location. Wildcards are permitted.
+        [Parameter(Mandatory = $true,
+            Position = 1,
+            ValueFromPipeline = $true,
+            ValueFromPipelineByPropertyName = $true,
+            HelpMessage = "Full path to module")]
+        $path,
         # Name of the Module
-        [string]$moduleName,
-        # Specifies a path to one or more locations. Wildcards are permitted.
-        [Parameter(Mandatory=$true,
-                   Position=1,
-                   ValueFromPipeline=$true,
-                   ValueFromPipelineByPropertyName=$true,
-                   HelpMessage="Name of the Module.")]
-        $path
+        [Parameter(Mandatory = $false,
+            Position = 2,
+            ValueFromPipeline = $false,
+            ValueFromPipelineByPropertyName = $false,
+            HelpMessage = "Name of the Module.")]
+        [string]$moduleName
     )
 
-    if ([string]::IsNullOrWhiteSpace($moduleName)) {
-        if ($path) {
-            if (!(Test-Path $path)) {
-                throw "$path does not exist"
-            }
-            Write-Host $path
-            $commandsHelp = Get-Help $path -Full
-            # | Where-Object { ! $_.name.EndsWith('.ps1') }
-        }
-        else {
-            throw "either -modulename or -path must be given"
-        }
-    }
-    else {
-        $commandsHelp = (Get-Command -module $moduleName) | Get-Help -Full | Where-Object { ! $_.name.EndsWith('.ps1') }
-    }
 
-    if ([string]::IsNullOrWhiteSpace($commandsHelp)) {
-        $commandsHelp = (Get-Command $moduleName -ErrorAction SilentlyContinue) | Get-Help -Full -ErrorAction SilentlyContinue
-        if ([string]::IsNullOrWhiteSpace($commandsHelp)) {
-            try {
-                $commandsHelp = Get-Help .\$moduleName -Full
-                # $commandsHelp.details.name = (Resolve-Path .\$moduleName -ErrorAction SilentlyContinue).basename
-            }
-            catch {
-                try {
-                    Get-Help .\$moduleName.ps1 -Full
-                    # $commandsHelp.details.name = (Resolve-Path .\$moduleName.ps1 -ErrorAction Stop).basename
-                }
-                catch {
-                    throw "ERROR: Command's help file is empty"
-                }
-            }
-        }
+    if (!(Test-Path $path)) {
+        throw "$path does not exist"
+    }
+    Write-Host $path
+    try {
+        $commandsHelp = Get-Help -Path $paths
+    }
+    catch {
+        throw "Could not find $path", $_
     }
 
     foreach ($help in $commandsHelp) {
