@@ -31,7 +31,12 @@ function Import-Help {
     }
 
     foreach ($help in $commandsHelp) {
-        $cmdHelp = Get-Command $help.Name
+        try{
+            $cmdHelp = Get-Command $help.Name}
+            catch{
+                Get-Command $help | Get-Member
+                throw
+            }
 
         # Get any aliases associated with the method
         $alias = Get-Alias -Definition $help.Name -ErrorAction SilentlyContinue
@@ -49,6 +54,7 @@ function Import-Help {
         }
 
         # Add parameter aliases to the object.
+        Write-Information "nothin"
         foreach ($p in $help.parameters.parameter ) {
             $paramAliases = ($cmdHelp.parameters.values | Where-Object name -like $p.name | Select-Object aliases).Aliases
             if ($paramAliases) {
